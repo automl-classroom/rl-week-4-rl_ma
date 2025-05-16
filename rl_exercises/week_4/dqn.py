@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Tuple
 
 import gymnasium as gym
 import hydra
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn
@@ -162,20 +163,29 @@ class DQNAgent(AbstractAgent):
         """
         if evaluate:
             # TODO: select purely greedy action from Q(s)
+            stateTensor = torch.tensor(
+                state, dtype=torch.float32
+            ).unsqueeze(
+                0
+            )  # Zustand in Float-Tensor umwandeln und Batch-Dimension hinzufügen, Form: [batch_size, obs_dim]
+
             with torch.no_grad():
-                state_tensor = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
-                qvals = self.q(state_tensor)
-                action = int(torch.argmax(qvals, dim=1).item())
+                qvals = self.q(
+                    stateTensor
+                )  # Q-Werte für alle Aktionen im aktuellen Zustand berechnen
+                action = int(
+                    torch.argmax(qvals, dim=1).item()
+                )  # Index der Aktion mit dem höchsten Q-Wert auswählen (greedy)
 
         else:
             if np.random.rand() < self.epsilon():
                 # TODO: sample random action
-                action = self.env.action_space.sample()
+                action = (
+                    self.env.action_space.sample()
+                )  # np.random.randint(qvals.shape[1])
             else:
                 # TODO: select purely greedy action from Q(s)
                 with torch.no_grad():
-                    state_tensor = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
-                    qvals = self.q(state_tensor)
                     action = int(torch.argmax(qvals, dim=1).item())
 
         return action
@@ -235,15 +245,28 @@ class DQNAgent(AbstractAgent):
         mask = torch.tensor(np.array(dones), dtype=torch.float32)  # noqa: F841
 
         # # TODO: pass batched states through self.q and gather Q(s,a)
-        q_values = self.q(s)  # [batch, n_actions]
-        pred = q_values.gather(1, a).squeeze(1)  # [batch]
+
+        q_values = self.q(
+            s
+        )  # Q-Werte für alle Aktionen und alle Zustände im Batch berechnen
+        pred = q_values.gather(1, a).squeeze(
+            1
+        )  # Q-Wert der tatsächlich ausgeführten Aktion für jeden Zustand extrahieren
 
         # TODO: compute TD target with frozen network
         with torch.no_grad():
             # Maximalen Q-Wert für s_next bestimmen (Double DQN optional)
-            target_q_values = self.target_q(s_next)  # [batch, n_actions]
-            max_next_q = target_q_values.max(1)[0]  # [batch]
-            target = r + self.gamma * (1 - mask) * max_next_q  # [batch]
+            target_q_values = self.target_q(
+                s_next
+            )  # Q-Werte für alle nächsten Zustände und Aktionen berechnen
+            max_next_q = target_q_values.max(
+                1
+            )[
+                0
+            ]  # Für jeden nächsten Zustand den maximalen Q-Wert (über alle Aktionen) auswählen
+            target = (
+                r + self.gamma * (1 - mask) * max_next_q
+            )  # TD-Target für jeden Übergang berechnen
 
         loss = nn.MSELoss()(pred, target)
 
@@ -273,6 +296,7 @@ class DQNAgent(AbstractAgent):
         state, _ = self.env.reset()
         ep_reward = 0.0
         recent_rewards: List[float] = []
+        corresponding_frame = []
 
         for frame in range(1, num_frames + 1):
             action = self.predict_action(state)
@@ -292,6 +316,7 @@ class DQNAgent(AbstractAgent):
             if done or truncated:
                 state, _ = self.env.reset()
                 recent_rewards.append(ep_reward)
+                corresponding_frame.append(frame)
                 ep_reward = 0.0
                 # logging
                 if len(recent_rewards) % 10 == 0:
@@ -301,7 +326,29 @@ class DQNAgent(AbstractAgent):
                         f"Frame {frame}, AvgReward(10): {avg:.2f}, ε={self.epsilon():.3f}"
                     )
 
+        self.plot_training_curve(recent_rewards, corresponding_frame)
         print("Training complete.")
+
+    def plot_training_curve(self, rewards, corrFrame):
+        cut = len(rewards) % 10
+        rewards = rewards[cut:] if cut != 0 else rewards
+        corrFrame = corrFrame[cut:] if cut != 0 else corrFrame
+        meanRewards = []
+        frames = []
+        for i in range(int(len(rewards) / 10)):
+            meanRewards.append(np.average(rewards[10 * i : 10 * i + 10]))
+            frames.append(corrFrame[10 * i + 5])
+        plt.figure(figsize=(10, 6))
+        plt.plot(frames, meanRewards, label="Mean Reward")
+        plt.xlabel("Frames")
+        plt.ylabel("Mean Reward")
+        plt.title(
+            f"Training Curve - {self.__class__.__name__}\n Depth: 3 | Width: 64 | Buffer-size: {self.buffer.capacity} | Batch-size: {self.batch_size}"
+        )
+        plt.grid(True)
+        plt.legend()
+        plt.show()
+        return
 
 
 @hydra.main(config_path="../configs/agent/", config_name="dqn", version_base="1.1")
@@ -311,18 +358,21 @@ def main(cfg: DictConfig):
     set_seed(env, cfg.seed)
 
     # 3) TODO: instantiate & train the agent
-    agent = DQNAgent(
-        env=env,
-        buffer_capacity=cfg.buffer_capacity,
-        batch_size=cfg.batch_size,
-        lr=cfg.lr,
-        gamma=cfg.gamma,
-        epsilon_start=cfg.epsilon_start,
-        epsilon_final=cfg.epsilon_final,
-        epsilon_decay=cfg.epsilon_decay,
-        target_update_freq=cfg.target_update_freq,
-        seed=cfg.seed,
-    )
+    # agent = DQNAgent(
+    #     env=env,
+    #     buffer_capacity=cfg.buffer_capacity,
+    #     batch_size=cfg.batch_size,
+    #     lr=cfg.lr,
+    #     gamma=cfg.gamma,
+    #     epsilon_start=cfg.epsilon_start,
+    #     epsilon_final=cfg.epsilon_final,
+    #     epsilon_decay=cfg.epsilon_decay,
+    #     target_update_freq=cfg.target_update_freq,
+    #     seed=cfg.seed,
+    # )
+    agent = DQNAgent(env=env, seed=cfg.seed, buffer_capacity=cfg.agent.buffer_capacity)
+    agent.train(cfg.train.num_frames, cfg.train.eval_interval)
+
     agent.train(cfg.num_frames)
 
 
