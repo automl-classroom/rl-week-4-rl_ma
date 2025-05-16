@@ -1,6 +1,7 @@
 # Ignore "imported but unused"
 # flake8: noqa: F401
 import os
+import sys
 import warnings
 
 import gymnasium as gym
@@ -26,10 +27,15 @@ from rl_exercises.agent.abstract_agent import AbstractAgent
 from rl_exercises.agent.buffer import SimpleBuffer
 from rl_exercises.environments import MarsRover
 from rl_exercises.week_2 import PolicyIteration, ValueIteration
-from rl_exercises.week_4 import EpsilonGreedyPolicy as TabularEpsilonGreedyPolicy
+
+# from rl_exercises.week_4 import EpsilonGreedyPolicy as TabularEpsilonGreedyPolicy
 from stable_baselines3 import PPO, SAC
 from stable_baselines3.common.monitor import Monitor
 from tqdm import tqdm
+
+sys.path.append(
+    "/Users/tizianohumpert/Documents/Studium_local/RL/Repo/rl-week-4-rl_ma/rl_exercises"
+)
 
 
 @hydra.main("configs", "base", version_base="1.1")  # type: ignore[misc]

@@ -1,3 +1,5 @@
+from typing import Sequence
+
 from collections import OrderedDict
 
 import torch
@@ -6,15 +8,12 @@ import torch.nn as nn
 
 class QNetwork(nn.Module):
     """
-    A simple MLP mapping state → Q‐values for each action.
-
-    Architecture:
-      Input → Linear(obs_dim→hidden_dim) → ReLU
-            → Linear(hidden_dim→hidden_dim) → ReLU
-            → Linear(hidden_dim→n_actions)
+    Ein flexibles MLP, das beliebig viele Hidden-Layer unterstützt.
     """
 
-    def __init__(self, obs_dim: int, n_actions: int, hidden_dim: int = 64) -> None:
+    def __init__(
+        self, obs_dim: int, n_actions: int, hidden_sizes: Sequence[int] = (64, 64)
+    ) -> None:
         """
         Parameters
         ----------
@@ -22,35 +21,22 @@ class QNetwork(nn.Module):
             Dimensionality of observation space.
         n_actions : int
             Number of discrete actions.
-        hidden_dim : int
-            Hidden layer size.
+        hidden_sizes : list/tuple of int
+            Größen der Hidden-Layer.
         """
         super().__init__()
 
-        self.net = nn.Sequential(
-            OrderedDict(
-                [
-                    ("fc1", nn.Linear(obs_dim, hidden_dim)),
-                    ("relu1", nn.ReLU()),
-                    ("fc2", nn.Linear(hidden_dim, hidden_dim)),
-                    ("relu2", nn.ReLU()),
-                    ("out", nn.Linear(hidden_dim, n_actions)),
-                ]
-            )
-        )
+        layers = []
+        in_dim = obs_dim
+        # Hidden-Layer dynamisch hinzufügen
+        for i, h in enumerate(hidden_sizes):
+            layers.append((f"fc{i + 1}", nn.Linear(in_dim, h)))
+            layers.append((f"relu{i + 1}", nn.ReLU()))
+            in_dim = h
+        # Output-Layer
+        layers.append(("out", nn.Linear(in_dim, n_actions)))
+
+        self.net = nn.Sequential(OrderedDict(layers))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        Forward pass.
-
-        Parameters
-        ----------
-        x : torch.Tensor
-            Batch of states, shape (batch, obs_dim).
-
-        Returns
-        -------
-        torch.Tensor
-            Q‐values, shape (batch, n_actions).
-        """
         return self.net(x)
