@@ -1,7 +1,6 @@
 # Ignore "imported but unused"
 # flake8: noqa: F401
 import os
-import sys
 import warnings
 
 import gymnasium as gym
@@ -32,10 +31,6 @@ from rl_exercises.week_2 import PolicyIteration, ValueIteration
 from stable_baselines3 import PPO, SAC
 from stable_baselines3.common.monitor import Monitor
 from tqdm import tqdm
-
-sys.path.append(
-    "/Users/tizianohumpert/Documents/Studium_local/RL/Repo/rl-week-4-rl_ma/rl_exercises"
-)
 
 
 @hydra.main("configs", "base", version_base="1.1")  # type: ignore[misc]
@@ -134,7 +129,7 @@ def train_sb3(env: gym.Env, cfg: DictConfig) -> float:
     model.learn(total_timesteps=cfg.total_timesteps)
 
     # Save agent
-    model.save(cfg.model_fn)
+    model.save("mein_modell.zip")
 
     # Evaluate
     env = Monitor(gym.make(cfg.env_id), filename="eval")

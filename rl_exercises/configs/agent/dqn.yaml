@@ -6,7 +6,7 @@ seed: 0
 
 agent:
   buffer_capacity:    10000    # max replay buffer size
-  batch_size:         32       # minibatch size
+  batch_size:         45       # minibatch size
   learning_rate:      0.001    # maps to DQNAgent’s lr
   gamma:              0.99
   epsilon_start:      1.0
@@ -19,4 +19,6 @@ train:
   eval_interval:  1000    # print avg reward every this many episodes
 
 network:
-  hidden_sizes: [64, 64]  # Breite und Tiefe
+  depth: 3
+  width: 64
+    

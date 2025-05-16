@@ -9,12 +9,14 @@ class QNetwork(nn.Module):
     A simple MLP mapping state → Q‐values for each action.
 
     Architecture:
-    Input → Linear(obs_dim→hidden_dim) → ReLU
+      Input → Linear(obs_dim→hidden_dim) → ReLU
             → Linear(hidden_dim→hidden_dim) → ReLU
             → Linear(hidden_dim→n_actions)
     """
 
-    def __init__(self, obs_dim: int, n_actions: int, hidden_dim: int = 64) -> None:
+    def __init__(
+        self, obs_dim: int, n_actions: int, hidden_dim: int = 64, depth: int = 3
+    ) -> None:
         """
         Parameters
         ----------
@@ -27,17 +29,13 @@ class QNetwork(nn.Module):
         """
         super().__init__()
 
-        self.net = nn.Sequential(
-            OrderedDict(
-                [
-                    ("fc1", nn.Linear(obs_dim, hidden_dim)),
-                    ("relu1", nn.ReLU()),
-                    ("fc2", nn.Linear(hidden_dim, hidden_dim)),
-                    ("relu2", nn.ReLU()),
-                    ("out", nn.Linear(hidden_dim, n_actions)),
-                ]
-            )
-        )
+        layers = [("fc1", nn.Linear(obs_dim, hidden_dim)), ("relu1", nn.ReLU())]
+        # Füge weitere 4 versteckte Schichten hinzu (insgesamt 5)
+        for i in range(2, depth):  # fc2 bis fc5
+            layers.append((f"fc{i}", nn.Linear(hidden_dim, hidden_dim)))
+            layers.append((f"relu{i}", nn.ReLU()))
+        layers.append(("out", nn.Linear(hidden_dim, n_actions)))
+        self.net = nn.Sequential(OrderedDict(layers))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
