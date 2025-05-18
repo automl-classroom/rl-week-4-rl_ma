@@ -337,19 +337,33 @@ class DQNAgent(AbstractAgent):
         print(
             f"../../../rl_exercises/week_4/plots/th/training_curve_{self.__class__.__name__}_depth_{self.depth}_width_{self.width}_buffer_{self.buffer.capacity}_batch_{self.batch_size}.png"
         )
-        ### muss auskommentiert werden da sonst tests nicht durchlaufen anderer arbeitsordner
+        ## muss auskommentiert werden da sonst tests nicht durchlaufen anderer arbeitsordner
         # plt.savefig(
         #     f"../../../rl_exercises/week_4/plots/th/training_curve_{self.__class__.__name__}_depth_{self.depth}_width_{self.width}_buffer_{self.buffer.capacity}_batch_{self.batch_size}.png"
         # )
         plt.show()
+        import os
 
+        save_path = os.path.abspath(
+            os.path.join("..", "..", "..", "dqn_trained_model.pth")
+        )
+        torch.save(
+            {
+                "parameters": self.q.state_dict(),
+                "optimizer": self.optimizer.state_dict(),
+            },
+            save_path,
+        )
+        print(f"Modell gespeichert unter: {save_path}")
         return
 
 
 @hydra.main(config_path="../configs/agent/", config_name="dqn", version_base="1.1")
 def main(cfg: DictConfig):
     # 1) build env
+    # env = gym.make(cfg.env.name, render_mode="human")
     env = gym.make(cfg.env.name)
+
     set_seed(env, cfg.seed)
 
     # 3) TODO: instantiate & train the agent
@@ -364,7 +378,7 @@ def main(cfg: DictConfig):
     print(f"Buffer size: {cfg.agent.buffer_capacity}")
     agent.train(cfg.train.num_frames, cfg.train.eval_interval)
 
-    # visualize
+    # 4) TODO: evaluate the agent
 
 
 if __name__ == "__main__":
